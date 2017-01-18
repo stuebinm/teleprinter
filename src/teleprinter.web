@@ -1,0 +1,373 @@
+
+
+So this might be something useful:
+
+<<*>>=
+
+<<globals>>
+<<functions>>
+
+int main (string[] argv) {
+    string input;
+    <<read in file>>
+    
+    <<set globals>>
+    
+    string output;
+    <<do parsing>>
+    
+    stdout.printf ("%s\n", output);
+    
+    return 0;
+}
+@
+
+
+Parsing:
+
+<<do parsing>>=
+    
+    output = parse_level (input);
+    if (output == null) {
+        stderr.printf ("Errors occured!\n");
+    }
+
+@
+
+
+
+
+
+\section {parsing & building}
+
+This is realized with two functions, parse_level() and parse_command(), which recursively call each other; one handles single commands, the other a 'level', i.e. an arbitrary amount of text with commands in it.
+The entire document is such a level.
+
+<<functions>>=
+string? parse_level (string input) {
+    
+    string output = "";
+    
+    MatchInfo m;
+    command_reg.match (input, 0, out m);
+    
+    int p = 0;
+    do {
+        int start, end;
+        m.fetch_pos (0, out start, out end);
+        output += m.get_string().slice (p, start);
+        p = end;
+        output += parse_command (m.fetch (0));
+    }
+    while (m.next ());
+    
+    return output;
+}
+
+string? parse_command (string command) {
+
+    MatchInfo m;
+    c_name_reg.match (command, 0, out m);
+    
+    string name = m.fetch (0);
+    
+    stdout.printf ("%s\n", name);
+    
+    <<execute command>>
+    
+    return null;
+
+}
+@
+
+There are two regular expressions that are required for this, one to match a single command and one to match a command's name:
+
+<<globals>>=
+Regex command_reg;
+Regex c_name_reg;
+@
+
+<<set globals>>=
+command_reg = /\\\w*\b(\s*{((?R)|.*)})*/;
+c_name_reg = /\\\w*\b/;
+@
+
+
+A single command can either be a basic one (i.e. an \emph{assembly command}) or it might be defined somewhere earlier in the document with the \\newcommand assembly command.
+
+An assembly command is defined directly in the code; as such, it is implemented by one branch in this switch.
+
+<<execute command>>=
+switch (name) {
+    case "\\begin":
+        <<begin>>
+        break;
+    case "\\end":
+        <<\end>>
+        break;
+    case "\\emph":
+        <<\emph>>
+        break;
+    case "\\title":
+        <<set title>>
+        break;
+    case "\\maketitle":
+        <<\maketitle>>
+        break;
+    case "\\hr":
+        <<\hr>>
+        break;
+    case "\\documentclass":
+        <<\documentclass>>
+        break;
+    default:
+        <<lookup command>>
+}
+@
+
+
+If a command is none of these, then it might be one that is defined within the document. This isn't supported yet, meaning that this will invariably result in an error:
+
+<<lookup command>>=
+    stderr.printf ("undefined command '%s'!\n", name);
+    return null;
+@
+
+In case of error, null is returned (which will then chain up until the top-level parse_level() call returns null and signifies an error).
+
+
+
+
+\subsection {assembly commands}
+
+Each basic command consists of a basic chunk of code:
+
+\subsubsection {the \\emph command}
+
+<<\emph>>=
+    return "\<em\>%s\</em\>".printf (get_single_argument (command));
+
+@
+
+
+
+\subsubsection {\\title}
+
+this sets the document's title.
+
+<<set title>>=
+    string arg = get_single_argument (command);
+    title = arg;
+@
+
+<<globals>>=
+string title;
+@
+
+<<set globals>>=
+title = "";
+@
+
+\subsubsection {\\maketitle}
+
+<<\maketitle>>=
+    return """
+    <div class="box-top">
+       <div class="title">
+         %s
+       </div>
+    </div>
+    <div class="box-main">
+    <div class="text">
+    """.printf (title);
+@
+
+
+\subsubsection {\\hr}
+
+<<\hr>>=
+return """
+    </div>
+    </div>
+    <div class="box-main">
+    <div class="text">
+""";
+@
+
+
+
+
+
+\subsubsection {\\begin and \\end}
+
+
+These are actually surprisingly simple. We just use a hashmap that stores what to do for every known environment (which is easily extensible with a \new command):
+
+<<begin>>=
+    string arg = remove_whitespace (get_single_argument (command));
+    
+    if (!envs.has_key (arg)) {
+         stderr.printf ("Unknown environment '%s'.\n", arg);
+         return null;
+    }
+    return envs[arg].begin;
+@
+
+<<\end>>=
+    string arg = remove_whitespace (get_single_argument (command));
+    
+    if (!envs.has_key (arg)) {
+         stderr.printf ("Unknown environment '%s'.\n", arg);
+         return null;
+    }
+    return envs[arg].end;
+@
+
+<<globals>>=
+
+Gee.HashMap <string, env> envs;
+@
+
+<<set globals>>=
+
+stdout.printf ("test\n");
+envs = new Gee.HashMap <string ,env> ();
+
+<<set assembly envs>>
+
+@
+
+Because all the default values for these tend to be a bit long, I've moved them to appendix A.
+
+This is the type in the actual hashmap, as well as a function to allocate a new one:
+
+<<functions>>=
+class env {
+    public string begin;
+    public string end;
+}
+
+env new_env (string begin, string end) {
+    env ret = new env ();
+    ret.begin = begin;
+    ret.end = end;
+    return ret;
+}
+
+@
+
+
+
+
+<<\documentclass>>=
+
+
+@
+
+Commands sometimes need to use arguments, so here's a function for that, as well as a convenience function for the many commands that just take one of them:
+
+<<functions>>=
+string[] get_arguments (string command) {
+    string[] ret = new string [0];
+    
+    MatchInfo m;
+    c_args_reg.match (command, 0, out m);
+    
+    do {
+        ret += (/(\{|\})/).replace (m.fetch (0), -1, 0, "");
+    } while (m.next ());
+    
+    
+    return ret;
+}
+
+string get_single_argument (string command) {
+    string[] args = get_arguments (command);
+    
+    if (args.length != 1) {
+        args_error ("\\emph", 1);
+    }
+    return args[0];
+}
+
+string remove_whitespace (string input) {
+    return (/\s/).replace (input, -1, 0, "");
+}
+@
+
+Basically, it runs through all the commands and stores them in an array.
+
+There's also a new constant in this, which contains a regular expression to parse single arguments:
+
+<<globals>>=
+Regex c_args_reg;
+@
+
+<<set globals>>=
+c_args_reg = /(?<arg> (\{)([^{}]+|(?&arg))*(\}))/;
+@
+
+Some commands expect to get a fixed number of arguments, so here's a handy error function for that:
+
+<<functions>>=
+void args_error (string command, int number, int found=0) {
+    stderr.printf ("%s takes exactly %d arguments, not %d!\n", command, number, found);
+}
+@
+
+
+
+
+
+\section {input}
+
+For now, a simple test input will suffice:
+
+<<read in file>>=
+    input = """\documentclass {post}
+
+
+\title {Post 1}
+
+
+\begin {document}
+
+\maketitle
+
+This is just some basic text, diplaying the possibilies that I want implemented.
+
+\emph {For example, {emphasised} text.}{and other text}
+
+\hr
+
+Or horizontal rulers.
+
+
+\end {document}
+
+""";
+@
+
+
+\section {Appendix A}
+
+<<set assembly envs>>=
+
+envs["document"] = new_env ("""
+      <html>
+        <body>
+          <div class="content"\>
+    """, 
+    """
+            </div>
+          </div>
+        </body>
+      </html>
+    """);
+
+@
+
+
+
+
+
