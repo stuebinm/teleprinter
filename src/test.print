@@ -1,0 +1,20 @@
+\documentclass {post}
+
+
+\title {Ye Olde Tyme Heliophysics Map}
+
+\newcommand{\maketitle}{test}
+
+\begin {document}
+
+\maketitle
+
+
+So someone at NASA made this cool old-fashioned map:
+
+this is text \emph{with} a macro in it.
+
+\emph {this is text with a \emph{recursive} macro in it.}
+
+\end {document}
+
