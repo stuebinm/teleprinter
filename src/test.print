@@ -1,9 +1,11 @@
 \documentclass {post}
 
 
+
 \title {Ye Olde Tyme Heliophysics Map}
 
-\newcommand{\maketitle}{test}
+\newcommand{\maketitle}{\tag{h1}{\get{title}}}
+
 
 \begin {document}
 

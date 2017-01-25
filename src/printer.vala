@@ -61,70 +61,11 @@ public class Printer : Object {
 	
 	private int parse_line (string line) {
 		if (line != "") {
-			string output = this.parse_level (line);
+			string output = this.commands.parse_level (line);
 			stdout.printf ("%s\n", output);
 		}
 		return 0;
 	}
-
-
-	private string? parse_level (string input) {
-	
-		string output = "";
-		
-		MatchInfo m;
-		Patterns.COMMAND.match (input, 0, out m);
-		
-		int p = 0;
-		if (m.fetch(0) != null) {
-			do {
-				int start, end;
-				m.fetch_pos (0, out start, out end);
-				output = m.get_string().slice (p, start);
-				p = end;
-				output += parse_command (m.fetch (0));
-				output += m.get_string().slice (p, m.get_string().length);
-			}
-			while (m.next ());
-		} else {
-			output = input;
-		}
-		
-		return output;
-	}
-
-	private string? parse_command (string command) {
-	
-		MatchInfo m;
-		Patterns.COMMAND_NAME.match (command, 0, out m);
-		
-		string name = m.fetch (0);
-		
-		
-		if (!this.commands.is_defined (name)) {
-			return command;
-		}
-		
-		string[] args= get_arguments (command);
-		return commands.execute (name, args);
-
-	}
-	
-	string[] get_arguments (string command) {
-		string[] ret = new string [0];
-		
-		MatchInfo m;
-		Patterns.SINGLE_ARGUMENT.match (command, 0, out m);
-		
-		if (m.fetch(0) == null) return ret;
-		do {
-		    ret += parse_level (m.fetch(0).slice (1, m.fetch(0).length-1));
-		} while (m.next ());
-		
-		
-		return ret;
-	}
-
 
 
 }
