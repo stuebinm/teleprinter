@@ -8,9 +8,11 @@ int main (string[] argv) {
 	}
 
 	Patterns.init ();
-
-	Printer p = new Printer.from_path (argv[1], "output.html");
-	p.run ();
+	
+	Commands c = new Commands ();
+	
+	Printer p = new Printer.from_path (argv[1], c, get_target_file (argv[1]));
+	p.run (true);
 	
 	return 0;
 }
