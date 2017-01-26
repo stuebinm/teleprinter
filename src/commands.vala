@@ -97,12 +97,15 @@ namespace Teleprinter {
 		private HashMap <string, string> begin_extra;
 		private HashMap <string, string> ends;
 		
-		public Commands () {
+		private Feed feed;
+		
+		public Commands (Feed? feed = null) {
 			this.c = new HashMap <string, AbstractCommand> ();
 			this.vars = new HashMap <string, string> ();
 			this.begins = new HashMap <string, string> ();
 			this.begin_extra = new HashMap <string, string> ();
 			this.ends = new HashMap <string, string> ();
+			this.feed = feed;
 			
 			this.vars ["paragraph"] = "\n\n";
 			
@@ -164,6 +167,7 @@ namespace Teleprinter {
 				Commands c = new Commands ();
 				p = new Printer.from_path (args[0], c, get_target_file (args[0]));
 				p.run (true, null);
+				if (this.feed != null) this.feed.append (c.vars["title"], c.vars["$summary"], c.vars["$uri"]);
 				return this.include_path ("%s%s".printf(get_prefix (args[0]),"description.aux"), true);
 			});
 			

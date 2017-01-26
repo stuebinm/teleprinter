@@ -71,6 +71,7 @@
         src/commands.vala
         src/printer.vala
         src/regex.vala
+        src/feed.vala
     
     # tell what libraries to use when compiling
     PACKAGES

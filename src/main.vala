@@ -28,10 +28,12 @@ int main (string[] argv) {
 
 	Patterns.init ();
 	
-	Commands c = new Commands ();
+	Feed f = new Feed ("out.atom");
+	Commands c = new Commands (f);
 	
 	Printer p = new Printer.from_path (argv[1], c, get_target_file (argv[1]));
 	p.run (true);
+	f.run ();
 	
 	return 0;
 }

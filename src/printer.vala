@@ -45,6 +45,7 @@ public class Printer : Object {
 	string markup;
 	
 	private DataOutputStream out_stream;
+	private Feed feed;
 	
 	Commands commands;
 	
@@ -53,6 +54,7 @@ public class Printer : Object {
 		this.path = path;
 		this.target = target;
 		this.commands = commands;
+		
 		if (this.commands == null) this.commands = new Commands ();
 		this.commands.set_vars (path, target);
 	}
